@@ -2,11 +2,15 @@ import game
 import model
 
 
-def play(test=False, split=False, test_players=[], nb_round=-1, counting_method=0):  # Parameters used in the case of
-    # a test (in game_test.py)
+def play(test: bool = False, split: bool = False, test_players: list = None, nb_round: int = -1,
+         counting_method: int = 0):  # Parameters used in the case of a test (in test.py)
+    model.SHOW_PYGAME = False
+
     if test:
+        model.SHOW_TERMINAL = False
         nb_player = len(test_players)
     else:
+        model.SHOW_TERMINAL = True
         nb_player = int(input("Number of players"))
     players = []
     nb_ia = 0
@@ -45,5 +49,34 @@ def play(test=False, split=False, test_players=[], nb_round=-1, counting_method=
             return
 
 
+def play_with_pygame():
+    import display_function
+    model.SHOW_TERMINAL = False
+    model.SHOW_PYGAME = True
+
+    window, window_height, window_width, white_rect, white_rect_height, background, card_width, card_height = display_function.init_display()
+    windows_param = [window, window_height, window_width, white_rect, white_rect_height, background, card_width,
+                     card_height]
+    list_players = display_function.get_start(windows_param)[1]
+    nb_ia = 0
+    players = []
+    for i in range(len(list_players)):
+        if len(list_players[i]) == 1:
+            players.append(model.AI(nb_ia))
+            nb_ia += 1
+        else:
+            players.append(model.HumanPlayer(list_players[i][1]))
+    party = game.Game(players)
+    while True:
+        party.play_round(windows_param)
+        is_empty = party.reset(windows_param)
+        if is_empty:
+            display_function.close_the_game(windows_param)
+            return
+        if display_function.ask_want_to_continue(windows_param):
+            display_function.close_the_game(windows_param)
+            return
+
+
 if __name__ == "__main__":
-    play()
+    play_with_pygame()

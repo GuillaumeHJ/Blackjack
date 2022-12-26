@@ -1,4 +1,5 @@
 import model
+import display_function
 
 NB_DECK = 8
 
@@ -65,9 +66,7 @@ class Game:
         elif self._counting_method == 3:
             self.increase_count_omega2(card)
 
-
-
-    def reset(self):
+    def reset(self, windows_param: list = None) -> bool:
         """
         We set the hand of the dealer and each player empty.
         """
@@ -81,6 +80,8 @@ class Game:
                     player_copy.append(player)
                 elif model.SHOW_TERMINAL:
                     print(f'{player.name} you are out of the game not enough money for you')
+                elif model.SHOW_PYGAME:
+                    display_function.show_looser(player, windows_param)
             else:
                 if player.index_hand == 1:
                     player.owner.reset()
@@ -94,7 +95,7 @@ class Game:
 
     def results(self) -> {str: str}:
         """
-        :return: a dictionary with the player's name for key and is statut for value.
+        :return: a dictionary with the player's name for key and his result for value.
         """
         results = {}
         value_dealer = self.dealer.value()
@@ -119,12 +120,16 @@ class Game:
 
         return results
 
-    def choose_bet(self):
+    def choose_bet(self, windows_param: list, test=False):
         for player in self.players:
-            if isinstance(player, model.HumanPlayer) and not self._test:
-                print(f'{player.name}: Your current money is {player.money}')
-                player.bet = int(input("What is your bet ?"))
-            elif isinstance(player, model.HumanPlayer) and self._test:  # Used to test the function in test.py
+            if isinstance(player, model.HumanPlayer) and not test:
+                if model.SHOW_TERMINAL:
+                    print(f'{player.name}: Your current money is {player.money}')
+                    player.bet = int(input("What is your bet ?"))
+                elif model.SHOW_PYGAME:
+                    player.bet = display_function.get_bet(player,
+                                                          windows_param)
+            elif isinstance(player, model.HumanPlayer) and test:  # Used to test the function in test_model.py
                 player.bet = player.money // 2
             elif isinstance(player, model.AI):
                 bet = int(player.money / 10 * (1 + (self.count / NB_DECK)))
@@ -134,22 +139,25 @@ class Game:
                     player.bet = player.money
             player.money -= player.bet
 
-    def first_distribution(self):
+    def first_distribution(self, windows_param: list):
         """
         The dealer distributes one card for his self and two cards for each players and after his second card.
         """
-        self._dealer.draw(self.deck)  # The dealer draws one
+        self._dealer.draw(self, windows_param, True)  # The dealer draws one
         for i in range(0, 2):  # Each player draws two cards
             for player in self.players:
-                player.draw(self.deck)
-        self._dealer.draw_without_showing(self.deck)
+                player.draw(self, windows_param, True)
+        self._dealer.draw_without_showing(self)
+        if model.SHOW_PYGAME:
+            display_function.show_first_distribution(self, windows_param)
 
-    def play_player(self, player: model.Player, i: int) -> int:
+    def play_player(self, player: model.Player, i: int, windows_param: list) -> int:
         """
         This function make a player play.
         To test if the split method work well change 52 by
-        16 in the classe deck and add a condition that card.value==10 we will have the possibility to split each time
+        16 in the class deck and add a condition that card.value==10 we will have the possibility to split each time
 
+        :param windows_param:
         :param i: this index allow us to know where we are in the list to pop the good element
         :param player: this is the player who is about to play
         :return: the number of elements we have add to the list
@@ -157,7 +165,9 @@ class Game:
         """
         if model.SHOW_TERMINAL:
             print(player.name + ": it's your turn to play !!")
-            player.show_hand()
+            player.show_hand(self, windows_param)
+        elif model.SHOW_PYGAME:
+            display_function.round_of(player, self, windows_param)
         keep_going = True
         while keep_going:
             keep_going = False
@@ -165,19 +175,19 @@ class Game:
             if (isinstance(player, model.HumanPlayer) and not isinstance(player, model.AliasPlayer)) or (
                     isinstance(player, model.AliasPlayer) and isinstance(player.owner, model.HumanPlayer)):
                 if not self._test:
-                    chosen_option = player.show_possibilities()
+                    chosen_option = player.show_possibilities(windows_param)
                 else:
-                    chosen_option = player.choose_option_test_classic()
+                    chosen_option = player.choose_option_ai_cheat(self.count)
             elif isinstance(player, model.AI) or (
                     isinstance(player, model.AliasPlayer) and isinstance(player.owner, model.AI)):
                 chosen_option = player.choose_option_ai_cheat(self.count)
             if chosen_option == 2:
-                self.increase_count(player.draw(self.deck))
+                self.increase_count(player.draw(self, windows_param))
                 if player.value() < 21:
                     keep_going = True
             if chosen_option == 3:
                 player.double()
-                self.increase_count(player.draw(self.deck))
+                self.increase_count(player.draw(self, windows_param))
                 if player.value() < 21:
                     keep_going = True
             elif chosen_option == 4:
@@ -191,32 +201,37 @@ class Game:
                             alias_player.owner.money -= alias_player.bet
                         alias_player.hand.append(player_father.hand[k])
                         self._players.insert(i, alias_player)
-                        index += self.play_player(alias_player, i)
+                        index += self.play_player(alias_player, i, windows_param)
                 else:
                     player_father.nb_hand += 1
                     for k in range(0, 2):
                         alias_player = model.AliasPlayer(player_father, player_father.nb_hand - (1 - k))
+                        if k == 0:
+                            alias_player.owner.money -= alias_player.bet
                         alias_player.hand.append(player_father.hand[k])
                         self._players.insert(i, alias_player)
-                        index += self.play_player(alias_player, i)
+                        index += self.play_player(alias_player, i, windows_param)
                 return index
         return 0
 
-    def play_round(self):
+    def play_round(self, windows_param=None) -> {str: str}:
         """
         This function is the main loop for each round.
         """
-        self.choose_bet()
-        self.first_distribution()
+        self.choose_bet(windows_param)
+        self.first_distribution(windows_param)
         players_copy = self._players.copy()
         index = 0
         for (i, player) in enumerate(players_copy):
-            index += self.play_player(player, i + index)
+            index += self.play_player(player, i + index, windows_param)
 
-        self.dealer.play(self.deck)
+        self.dealer.play(self, windows_param)
         results = self.results()
 
         if model.SHOW_TERMINAL:
             for player_name, message in results.items():
                 print(player_name + " you have " + message)
+        elif model.SHOW_PYGAME:
+            display_function.show_results(self, results, windows_param)
+
         return results
