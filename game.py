@@ -59,11 +59,11 @@ class Game:
         :param card: the card that has been drawn
         """
         if self._counting_method == 1:
-            self.increase_count_hi_lo(self, card)
+            self.increase_count_hi_lo(card)
         elif self._counting_method == 2:
-            self.increase_count_ko(self, card)
+            self.increase_count_ko(card)
         elif self._counting_method == 3:
-            self.increase_count_omega2(self, card)
+            self.increase_count_omega2(card)
 
 
 
@@ -167,7 +167,7 @@ class Game:
                 if not self._test:
                     chosen_option = player.show_possibilities()
                 else:
-                    chosen_option = player.choose_option_test_classic(self.count)
+                    chosen_option = player.choose_option_test_classic()
             elif isinstance(player, model.AI) or (
                     isinstance(player, model.AliasPlayer) and isinstance(player.owner, model.AI)):
                 chosen_option = player.choose_option_ai_cheat(self.count)

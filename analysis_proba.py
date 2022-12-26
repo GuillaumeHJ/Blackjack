@@ -78,8 +78,7 @@ def compute_proba_superior_rate(nb_player, nb_round, rate, counting_method):
                 proba[i] += 1
     for i in range(nb_player):
         proba[i] = proba[i] / nb_round
-    print(proba)
     return proba
 
 
-
+compute_proba_superior_rate(3, 500, 1.5, 1)

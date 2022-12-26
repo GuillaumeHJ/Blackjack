@@ -1,6 +1,7 @@
 import main
 import model
 import analysis_proba
+import statistics
 
 
 def global_game_test():
@@ -52,4 +53,23 @@ def proba_plot_test(nb_players_ask, nb_round_theo, counting_method, limit_rate):
 
 
 def counting_method_efficiency_test(counting_method):
-    analysis_proba.compute_proba_superior_rate(4, 500, 2, counting_method)
+    """
+
+    :param counting_method: pick 0,1,2 or 3 to choose which counting method you will evaluate the efficiency
+    :return: the probability to exceed 150% of your initial bet
+    """
+    print(statistics.mean(analysis_proba.compute_proba_superior_rate(4, 500, 1.5, counting_method)))
+
+    # This probability is supposed to be greater than 0.5, since counting cards should help us to beat the dealer.
+    # If not, it means that the counting method isn't well implemented, or simply not efficient enough. it is hard
+    # to dissociate these two cases, since we didn't manage to find a paper on the efficiency of these methods.
+
+
+global_game_test()
+
+split_test()
+
+proba_plot_test()
+
+for i in range(4):
+    counting_method_efficiency_test(i)
